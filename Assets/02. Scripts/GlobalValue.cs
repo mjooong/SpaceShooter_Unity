@@ -1,6 +1,7 @@
 using System.Collections;
 using System.Collections.Generic;
 using UnityEngine;
+using UnityEngine.Experimental.GlobalIllumination;
 
 public enum SkillType
 {
@@ -12,6 +13,8 @@ public enum SkillType
 
 public class GlobalValue 
 {
+    public static string g_Unique_ID = "";  // 유저의 고유번호
+
     public static string g_NickName = "";   //유저의 별명
     public static int g_BestScore = 0;      //게임점수
     public static int g_UserGold  = 0;      //게임머니
@@ -27,9 +30,9 @@ public class GlobalValue
     {
         //PlayerPrefs.SetInt("UserGold", 999999);
 
-        g_NickName  = PlayerPrefs.GetString("NickName", "SBS영웅");
+        //g_NickName  = PlayerPrefs.GetString("NickName", "테스트용");
         g_BestScore = PlayerPrefs.GetInt("BestScore", 0);
-        g_UserGold  = PlayerPrefs.GetInt("UserGold", 0);
+        g_UserGold = PlayerPrefs.GetInt("UserGold", 0);
 
         string a_MkKey = "";
         for(int ii = 0; ii < g_SkillCount.Length; ii++)

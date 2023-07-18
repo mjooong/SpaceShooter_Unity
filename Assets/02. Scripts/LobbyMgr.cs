@@ -31,6 +31,9 @@ public class LobbyMgr : MonoBehaviour
             {
                 SceneManager.LoadScene("TitleScene");
             });
+
+        if (m_Clear_Save_Btn != null)
+            m_Clear_Save_Btn.onClick.AddListener(Clear_Save_Click);
     }
 
     // Update is called once per frame
@@ -50,5 +53,11 @@ public class LobbyMgr : MonoBehaviour
 
         SceneManager.LoadScene("scLevel01");
         SceneManager.LoadScene("scPlay", LoadSceneMode.Additive);
+    }
+
+    void Clear_Save_Click()
+    {
+        PlayerPrefs.DeleteAll();
+        GlobalValue.LoadGameData();
     }
 }

@@ -262,8 +262,10 @@ public class GameMgr : MonoBehaviour
                         "BEST <color=#ff0000>" + GlobalValue.g_BestScore.ToString() +
                         "</color>";
 
-        PlayerPrefs.SetInt("BestScore", GlobalValue.g_BestScore);
-    }
+        //PlayerPrefs.SetInt("BestScore", GlobalValue.g_BestScore);
+        NetworkMgr.Inst.PushPacket(PacketType.BestScore);
+
+    }//public void DispScore(int score)
 
     public void AddGold(int Value = 10)
     {
