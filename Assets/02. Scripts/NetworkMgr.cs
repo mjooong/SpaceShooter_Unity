@@ -2,6 +2,7 @@ using System.Collections;
 using System.Collections.Generic;
 using UnityEngine;
 using UnityEngine.Networking;
+using UnityEngine.SceneManagement;
 
 public enum PacketType
 {
@@ -24,6 +25,7 @@ public class NetworkMgr : MonoBehaviour
     // --- 서버에 전송할 패킷 처리용 큐 관련 변수
 
     string BestScoreUrl = "";
+    string MyGoldUrl = "";
 
     // 싱글턴 패턴을 위한 인스턴스 변수 선언
     public static NetworkMgr Inst = null;
@@ -37,6 +39,7 @@ public class NetworkMgr : MonoBehaviour
     void Start()
     {
         BestScoreUrl = "http://minjong0712.dothome.co.kr/_WebProgram/UpdateBScore.php";
+        MyGoldUrl = "http://minjong0712.dothome.co.kr/_WebProgram/UpdateMyGold.php";
 
     }//void Start()
 
@@ -61,6 +64,8 @@ public class NetworkMgr : MonoBehaviour
     {
         if (m_PacketBuff[0] == PacketType.BestScore)
             StartCoroutine(UpadateScoreCo());
+        else if (m_PacketBuff[0] == PacketType.UserGold)
+            StartCoroutine(UpdateGoldCo());
 
         m_PacketBuff.RemoveAt(0);
 
@@ -68,7 +73,10 @@ public class NetworkMgr : MonoBehaviour
 
     void Exe_GameEnd()      // execute : 실행하다. 
     {// 매번 처리할 패킷이 하나도 없을때만 종료처리 해야할지 판단하는 함수
-
+        if (GameMgr.s_GameState == GameState.GameExit)
+        {
+            SceneManager.LoadScene("scLobby");
+        }
 
     }//void Exe_GameEnd()
 
@@ -100,6 +108,37 @@ public class NetworkMgr : MonoBehaviour
         isNetworkLock = false;
 
     }//IEnumerator UpadateScoreCo
+
+    IEnumerator UpdateGoldCo()  // 골드 갱신 코루틴
+    {
+        if(GlobalValue.g_Unique_ID == "")
+            yield break;
+
+        WWWForm form = new WWWForm();
+        form.AddField("Input_user", GlobalValue.g_Unique_ID, System.Text.Encoding.UTF8);
+        form.AddField("Input_gold", GlobalValue.g_UserGold);
+
+        isNetworkLock = true;
+
+        UnityWebRequest a_www = UnityWebRequest.Post(MyGoldUrl, form);
+        yield return a_www.SendWebRequest();    // 응답이 올때까지 대기..
+
+        if(a_www.error == null) // 에러가 없다면 동작
+        {
+            Debug.Log("UpdateGoldSucess");
+        }
+        else
+        {
+            Debug.Log(a_www.error);
+        }
+
+        a_www.Dispose();
+
+        isNetworkLock = false;
+
+        //yield return null;
+
+    }//IEnumerator UpdateGoldCo()
 
     public void PushPacket(PacketType a_PType)
     {

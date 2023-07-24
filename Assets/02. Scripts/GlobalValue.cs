@@ -30,9 +30,9 @@ public class GlobalValue
     {
         //PlayerPrefs.SetInt("UserGold", 999999);
 
-        //g_NickName  = PlayerPrefs.GetString("NickName", "테스트용");
-        g_BestScore = PlayerPrefs.GetInt("BestScore", 0);
-        g_UserGold = PlayerPrefs.GetInt("UserGold", 0);
+        //g_NickName  = PlayerPrefs.GetString("NickName", "플레이어이름");
+        //g_BestScore = PlayerPrefs.GetInt("BestScore", 0);
+        //g_UserGold = PlayerPrefs.GetInt("UserGold", 0);
 
         string a_MkKey = "";
         for(int ii = 0; ii < g_SkillCount.Length; ii++)

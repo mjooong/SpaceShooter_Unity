@@ -19,7 +19,12 @@ using UnityEngine.UI;
 public enum GameState
 {
     GameIng,
-    GameEnd
+    GameEnd,
+
+    GameExit,
+    GameReplay,
+
+    LobbyToEnding
 }
 
 public class GameMgr : MonoBehaviour
@@ -121,7 +126,8 @@ public class GameMgr : MonoBehaviour
         if (BackBtn != null)
             BackBtn.onClick.AddListener(() =>
             {
-                SceneManager.LoadScene("scLobby");
+                //SceneManager.LoadScene("scLobby");
+                s_GameState = GameState.GameExit;
             });
 
         //--- 난이도 층 별로 몬스터 최대 스폰 마릿수 증가
@@ -285,8 +291,10 @@ public class GameMgr : MonoBehaviour
         m_UserGoldText.text = "Gold <color=#ffff00>" +
                             GlobalValue.g_UserGold + "</color>";
 
-        PlayerPrefs.SetInt("UserGold", GlobalValue.g_UserGold);
-    }
+        //PlayerPrefs.SetInt("UserGold", GlobalValue.g_UserGold);
+        NetworkMgr.Inst.PushPacket(PacketType.UserGold);
+        
+    }//public void AddGold(int Value = 10)
 
     public static bool IsPointerOverUIObject() //UGUI의 UI들이 먼저 피킹되는지 확인하는 함수
     {
