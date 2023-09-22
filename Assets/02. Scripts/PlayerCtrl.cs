@@ -381,8 +381,9 @@ public class PlayerCtrl : MonoBehaviour
         }
 
         GlobalValue.g_SkillCount[(int)a_SkType]--;
-        string a_MkKey = "SkItem_" + ((int)a_SkType).ToString();
-        PlayerPrefs.SetInt(a_MkKey, GlobalValue.g_SkillCount[(int)a_SkType]);
+        //string a_MkKey = "SkItem_" + ((int)a_SkType).ToString();
+        //PlayerPrefs.SetInt(a_MkKey, GlobalValue.g_SkillCount[(int)a_SkType]);
+        NetworkMgr.Inst.PushPacket(PacketType.InfoUpdate);
 
     }//public void UseSkill_Item(SkillType a_SkType)
 

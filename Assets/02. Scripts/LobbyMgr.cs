@@ -81,6 +81,9 @@ public class LobbyMgr : MonoBehaviour
                 MessageOnOff("", false);    //메시지 끄기
             }
         }
+
+        //if (0.0f < ClearLockTimer)
+        //    ClearLockTimer -= Time.deltaTime;
     }
 
     void StartBtnClick()
@@ -159,4 +162,6 @@ public class LobbyMgr : MonoBehaviour
 
         LobbyNetworkMgr.Inst.RestoreTimer = 7.0f;
     }
+
+
 }

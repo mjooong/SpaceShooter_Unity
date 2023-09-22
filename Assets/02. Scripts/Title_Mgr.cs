@@ -114,39 +114,39 @@ public class Title_Mgr : MonoBehaviour
         // using UnityEngine.Networking;
         UnityWebRequest a_www = UnityWebRequest.Post(LoginUrl, form);
 
-        yield return a_www.SendWebRequest();    // 응답이 올 때까지 대기..
+        yield return a_www.SendWebRequest();    //응답이 올 때까지 대기하기...
 
-        if(a_www.error == null) // 에러가 발생하지 않은 경우
+        if (a_www.error == null) //에러가 발생하지 않은 경우
         {
             System.Text.Encoding enc = System.Text.Encoding.UTF8;
             string sz = enc.GetString(a_www.downloadHandler.data);
             a_www.Dispose();
 
             //Debug.Log(sz);
-            if(sz.Contains("Login-Success!!") == false)
+            if (sz.Contains("Login-Success!!") == false)
             {
                 if (sz.Contains("ID does not exist") == true)
-                    MessageOnOff("ID가 존재하지 않습니다.");
+                    MessageOnOff("아이디가 존재하지 않습니다.");
                 else if (sz.Contains("PassWord does not Match") == true)
-                    MessageOnOff("PW가 일치하지 않습니다.");
-                else 
+                    MessageOnOff("비밀번호가 일치하지 않습니다.");
+                else
                     MessageOnOff("로그인 실패, 다시 시도해 주세요.");
 
-                yield break;    // 일반 함수의 return; 효과
+                yield break; //일반함수의 return; 효과
             }
 
-            if(sz.Contains("{\"") == false)     // JSON 형식이 맞는지 확인하는 코드
+            if (sz.Contains("{\"") == false) //JSON 형식이 맞는지 확인 하는 코드
             {
                 MessageOnOff("서버의 응답이 정상적이지 않습니다. : " + sz);
 
                 yield break;
             }
 
-            GlobalValue.g_Unique_ID = a_IdStr;  // 나중에 암호화 필요
+            GlobalValue.g_Unique_ID = a_IdStr;  //나중에 암호화 필요
 
             string a_GetStr = sz.Substring(sz.IndexOf("{\""));
 
-            // JSON 파싱
+            //JSON 파싱
             var N = JSON.Parse(a_GetStr);
             if (N == null)
                 yield break;
@@ -159,11 +159,29 @@ public class Title_Mgr : MonoBehaviour
 
             if (N["game_gold"] != null)
                 GlobalValue.g_UserGold = N["game_gold"].AsInt;
-            
-            //if (N["block_info"] != null)
-            //    GlobalValue.g_BestBlock = N["block_info"].AsInt;
 
-            SceneManager.LoadScene("scLobby");
+            if (N["Item_list"] != null)
+            {
+                string m_StrJson = N["Item_list"];
+                if (string.IsNullOrEmpty(m_StrJson) == false &&
+                   m_StrJson.Contains("SkList") == true)
+                {
+                    //---myinfo쪽 JSON 파일 파싱
+                    var a_N = JSON.Parse(m_StrJson);
+                    for (int ii = 0; ii < a_N["SkList"].Count; ii++)
+                    {
+                        int a_CrLevel = a_N["SkList"][ii].AsInt;
+                        if (ii < GlobalValue.g_SkillCount.Length)
+                        {
+                            GlobalValue.g_SkillCount[ii] = a_CrLevel;
+                        } //if(ii < GlobalValue.m_CrDataList.Count)
+                    } //for(int ii = 0; ii < a_N["SkList"].Count; ii++)
+                    //---myinfo쪽 JSON 파일 파싱
+
+                } //if(string.IsNullOrEmpty(m_StrJson) == false 
+            }
+
+            SceneManager.LoadScene("ScLobby");
         }
         else
         {
@@ -172,7 +190,7 @@ public class Title_Mgr : MonoBehaviour
         }
 
     }//IEnumerator LoginCo(string a_IdStr, string a_PwStr)
-    
+
     void OpenCreateAccBtn()
     {
         if (m_LoginPanelObj != null)

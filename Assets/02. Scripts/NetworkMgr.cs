@@ -3,6 +3,7 @@ using System.Collections.Generic;
 using UnityEngine;
 using UnityEngine.Networking;
 using UnityEngine.SceneManagement;
+using SimpleJSON;
 
 public enum PacketType
 {
@@ -26,6 +27,8 @@ public class NetworkMgr : MonoBehaviour
 
     string BestScoreUrl = "";
     string MyGoldUrl = "";
+    string InfoUpdateUrl = "";
+    string m_SvStrJson = "";    //서버에 전달하려고 하는 JSON형식이 뭔지?
 
     // 싱글턴 패턴을 위한 인스턴스 변수 선언
     public static NetworkMgr Inst = null;
@@ -40,6 +43,7 @@ public class NetworkMgr : MonoBehaviour
     {
         BestScoreUrl = "http://minjong0712.dothome.co.kr/_WebProgram/UpdateBScore.php";
         MyGoldUrl = "http://minjong0712.dothome.co.kr/_WebProgram/UpdateMyGold.php";
+        InfoUpdateUrl = "http://minjong0712.dothome.co.kr/_WebProgram/InfoUpdate.php";
 
     }//void Start()
 
@@ -66,6 +70,8 @@ public class NetworkMgr : MonoBehaviour
             StartCoroutine(UpadateScoreCo());
         else if (m_PacketBuff[0] == PacketType.UserGold)
             StartCoroutine(UpdateGoldCo());
+        else if (m_PacketBuff[0] == PacketType.InfoUpdate)
+            StartCoroutine(UpdateInfoCo());
 
         m_PacketBuff.RemoveAt(0);
 
@@ -139,6 +145,48 @@ public class NetworkMgr : MonoBehaviour
         //yield return null;
 
     }//IEnumerator UpdateGoldCo()
+
+    IEnumerator UpdateInfoCo()
+    {
+        if (GlobalValue.g_Unique_ID == "")
+            yield break;
+
+        //---- JSON 만들기 ... 
+        JSONObject a_MkJSON = new JSONObject();
+        JSONArray jArray = new JSONArray(); //배열이 필요할 때
+        for (int ii = 0; ii < GlobalValue.g_SkillCount.Length; ii++)
+        {
+            jArray.Add(GlobalValue.g_SkillCount[ii]);
+        }
+        a_MkJSON.Add("SkList", jArray); //배열을 넣음
+        m_SvStrJson = a_MkJSON.ToString();
+        //---- JSON 만들기 ...
+
+        WWWForm form = new WWWForm();
+        form.AddField("Input_user", GlobalValue.g_Unique_ID,
+                                        System.Text.Encoding.UTF8);
+
+        form.AddField("Info_data", m_SvStrJson, System.Text.Encoding.UTF8);
+
+        isNetworkLock = true;
+
+        UnityWebRequest a_www = UnityWebRequest.Post(InfoUpdateUrl, form);
+        yield return a_www.SendWebRequest();    //응답이 올때까지 대기하기...
+
+        if (a_www.error == null)  //에러가 나지 않았을 때 동작
+        {
+            //Debug.Log("UpDateSuccess~");
+        }
+        else
+        {
+            Debug.Log(a_www.error);
+        }
+
+        a_www.Dispose();
+
+        isNetworkLock = false;
+
+    }//IEnumerator UpdateInfoCo()
 
     public void PushPacket(PacketType a_PType)
     {

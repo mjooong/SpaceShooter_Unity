@@ -1,6 +1,8 @@
+using SimpleJSON;
 using System.Collections;
 using System.Collections.Generic;
 using UnityEngine;
+using UnityEngine.Networking;
 using UnityEngine.UI;
 
 public class ItemDragMgr : MonoBehaviour
@@ -16,6 +18,15 @@ public class ItemDragMgr : MonoBehaviour
     float m_HelpAddTimer = 0.0f;
     float m_CacTime = 0.0f;
     Color m_Color;
+
+    //--- 서버와의 통신을 위해 변수
+    int m_SvMyGold = 0;  //Backup
+    int[] m_SvSkCount = new int[3];
+    string m_SvStrJson = "";    //서버에 전달하려고 하는 JSON형식이 뭔지?
+
+    bool isNetworkLock = false;
+    string BuyRequestUrl = "";
+    //--- 서버와의 통신을 위해 변수
 
     // Start is called before the first frame update
     void Start()
@@ -43,6 +54,8 @@ public class ItemDragMgr : MonoBehaviour
         }
         if (m_BagsizeText != null)
             m_BagsizeText.text = "가방사이즈 : " + a_CurBagSize + " / 10";
+
+        BuyRequestUrl = "http://minjong0712.dothome.co.kr/_WebProgram/Buy_Request.php";
     }
 
     // Update is called once per frame
@@ -139,10 +152,13 @@ public class ItemDragMgr : MonoBehaviour
             m_InvenSlots[a_BuyIndex].ItemImg.sprite = a_MsIconImg;
             m_InvenSlots[a_BuyIndex].ItemImg.gameObject.SetActive(true);
             m_InvenSlots[a_BuyIndex].m_CurItemIdx = m_SaveIndex;
+
+            StartCoroutine(BuyRequestCo());
         }
 
         m_SaveIndex = -1;
         m_MsObj.gameObject.SetActive(false);
+
 
     }//void MouseBtnUp()
 
@@ -191,13 +207,23 @@ public class ItemDragMgr : MonoBehaviour
             return false;
         }
 
+        // 정식 구매 과정은 드래그 앤 드릅 시 확인 다이알로그를 띄우기 유저의 동의 후
+        // 서버에서 구매 확인, 승인 후 클라이언트에 응답을 주고 UI를 갱신해 주는
+        // 과정으로 진행해야 한다.
+
+        //--- Backup 받아 놓기 (실패시 돌려 놓기 위한 용도)
+        for (int ii = 0; ii < GlobalValue.g_SkillCount.Length; ii++)
+            m_SvSkCount[ii] = GlobalValue.g_SkillCount[ii];
+        m_SvMyGold = GlobalValue.g_UserGold;
+        //--- Backup 받아 놓기 (실패시 돌려 놓기 위한 용도)
+
         GlobalValue.g_SkillCount[a_SkIdx]++;
         GlobalValue.g_UserGold -= a_Cost;
 
         //--- 변동 사항 로컬에 저장
-        string a_MkKey = "SkItem_" + a_SkIdx.ToString();
-        PlayerPrefs.SetInt(a_MkKey, GlobalValue.g_SkillCount[a_SkIdx]);
-        PlayerPrefs.SetInt("UserGold", GlobalValue.g_UserGold);
+        //string a_MkKey = "SkItem_" + a_SkIdx.ToString();
+        //PlayerPrefs.SetInt(a_MkKey, GlobalValue.g_SkillCount[a_SkIdx]);
+        //PlayerPrefs.SetInt("UserGold", GlobalValue.g_UserGold);
         //--- 변동 사항 로컬에 저장
 
         //--- UI 갱신
@@ -229,5 +255,106 @@ public class ItemDragMgr : MonoBehaviour
         //m_HelpText.color = Color.blue;
         m_HelpText.gameObject.SetActive(true);
         m_HelpAddTimer = m_HelpDuring;
+    }
+
+    //서버에 데이터 값 전달하기...
+    IEnumerator BuyRequestCo()
+    {
+        //--- JSON 만들기...
+        JSONObject a_MkJSON = new JSONObject();
+        JSONArray jArray = new JSONArray(); //배열이 필요할 때
+        for (int ii = 0; ii < GlobalValue.g_SkillCount.Length; ii++)
+        {
+            jArray.Add(GlobalValue.g_SkillCount[ii]);
+        }
+        a_MkJSON.Add("SkList", jArray); //배열을 넣음
+        m_SvStrJson = a_MkJSON.ToString();
+        //--- JSON 만들기...
+
+        if (string.IsNullOrEmpty(m_SvStrJson) == true)
+        {
+            RecoverItem();
+            yield break;        //구매 실패 상태라면 그냥 리턴
+        }
+
+        if (string.IsNullOrEmpty(GlobalValue.g_Unique_ID) == true)
+        {
+            RecoverItem();
+            yield break;        //로그인 상태가 아니면 그냥 리턴
+        }
+
+        WWWForm form = new WWWForm();
+        form.AddField("Input_user", GlobalValue.g_Unique_ID,
+                                        System.Text.Encoding.UTF8);
+        form.AddField("My_Gold", GlobalValue.g_UserGold);
+        form.AddField("Item_list", m_SvStrJson, System.Text.Encoding.UTF8);
+
+        isNetworkLock = true;
+
+        UnityWebRequest a_www = UnityWebRequest.Post(BuyRequestUrl, form);
+        yield return a_www.SendWebRequest();    //응답이 올때까지 대기하기...
+
+        if (a_www.error == null) //에러가 나지 않았을 때 동작
+        {
+            System.Text.Encoding enc = System.Text.Encoding.UTF8;
+            string a_ReStr = enc.GetString(a_www.downloadHandler.data);
+            //응답완료가 되면 전체 갱신(전체 값을 받아서 갱신하는 방법이 있고,
+            //m_SvMyPoint, m_BuyCrType 를 가지고 갱신하는 방법이 있다.)
+            //if (a_ReStr.Contains("BuySuccess~") == true)
+            //   //RefreshMyInfoCo();
+            //else
+            if (a_ReStr.Contains("BuySuccess~") == false) //구매 실패 시
+            {
+                RecoverItem();
+                Debug.Log(a_ReStr);
+            }
+        }
+        else //구매 실패 시
+        {
+            RecoverItem();
+            Debug.Log(a_www.error);
+        }
+
+        a_www.Dispose();
+
+        isNetworkLock = false;
+    }
+
+    void RecoverItem()  //이전 상태로 원복
+    {
+        GlobalValue.g_UserGold = m_SvMyGold;
+
+        //--- UI 갱신
+        for (int ii = 0; ii < m_InvenSlots.Length; ii++)
+        {
+            GlobalValue.g_SkillCount[ii] = m_SvSkCount[ii];
+
+            if (0 < GlobalValue.g_SkillCount[ii])
+            {
+                m_InvenSlots[ii].ItemCountTxt.text = GlobalValue.g_SkillCount[ii].ToString();
+                m_InvenSlots[ii].ItemImg.sprite = m_ProductSlots[ii].ItemImg.sprite;
+                m_InvenSlots[ii].ItemImg.gameObject.SetActive(true);
+                m_InvenSlots[ii].m_CurItemIdx = ii;
+            }
+            else
+            {
+                m_InvenSlots[ii].ItemCountTxt.text = "0";
+                m_InvenSlots[ii].ItemImg.gameObject.SetActive(false);
+            }
+        }//for (int ii = 0; ii < m_InvenSlots.Length; ii++)
+
+        Store_Mgr a_StMgr = null;
+        GameObject a_StObj = GameObject.Find("Store_Mgr");
+        if (a_StObj != null)
+            a_StMgr = a_StObj.GetComponent<Store_Mgr>();
+        if (a_StMgr != null && a_StMgr.m_UserInfoText != null)
+            a_StMgr.m_UserInfoText.text = "별명(" + GlobalValue.g_NickName + ") : 보유골드(" +
+                                        GlobalValue.g_UserGold + ")";
+
+        int a_CurBagSize = 0;
+        for (int ii = 0; ii < GlobalValue.g_SkillCount.Length; ii++)
+            a_CurBagSize += GlobalValue.g_SkillCount[ii];
+        m_BagsizeText.text = "가방사이즈 : " + a_CurBagSize + " / 10";
+        //--- UI 갱신
     }
 }
